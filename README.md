@@ -1,5 +1,9 @@
 # RAS
+
+**Under Construction...**
+
 Genomewide Association Studies Empowered by Regional Association Scores (RAS)
+
 
 Toy Example
 Executing the ras.R script will generate outputs in the ./result subdirectory. This script is set up with a toy example to demonstrate its functionality.
