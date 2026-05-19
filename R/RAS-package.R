@@ -4,8 +4,7 @@
 #' genome-wide association studies.  It converts per-SNP effect sizes into a
 #' genomic \eqn{-\log_{10}(p)} time series and applies changepoint detection
 #' to locate peaks that mark significant association regions.  The method
-#' uses repeated 50/50 train/hold-out splits to average out noise, with
-#' separate handling for continuous and binary traits.
+#' supports both continuous and binary traits.
 #'
 #' @section Option A — one call (recommended):
 #' \code{\link{ras}} runs the complete pipeline and returns a \code{"ras"}
