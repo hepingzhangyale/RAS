@@ -2,6 +2,10 @@
 
 The **RAS** package implements the Regional Association Score method for genome-wide association studies. It converts per-SNP effect sizes into a genomic −log₁₀(*p*) time series and applies changepoint detection to locate peaks that mark significant association regions. The method uses repeated 50/50 train/hold-out splits to average out noise, with separate handling for continuous and binary traits.
 
+If you use this package in your research, please cite:
+
+> Y. Jiang & H. Zhang, Empowering genome-wide association studies via a visualizable test based on the regional association score, *Proc. Natl. Acad. Sci. U.S.A.* 122(9) e2419721122 (2025). https://doi.org/10.1073/pnas.2419721122
+
 ---
 
 ## Installation
@@ -144,6 +148,12 @@ plot(result)
 ```
 
 ---
+
+## Citation
+
+If you use RAS in your research, please cite:
+
+Y. Jiang & H. Zhang, Empowering genome-wide association studies via a visualizable test based on the regional association score, *Proc. Natl. Acad. Sci. U.S.A.* 122(9) e2419721122 (2025). https://doi.org/10.1073/pnas.2419721122
 
 ## Authors
 
