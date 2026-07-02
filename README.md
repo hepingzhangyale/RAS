@@ -10,6 +10,7 @@ If you use this package in your research, please cite:
 
 ---
 
+
 ## Installation
 
 ### Method 1 — From GitHub via `remotes` (recommended)
@@ -60,7 +61,7 @@ Download the pre-built `.zip` from the
 
 ```r
 install.packages(
-  "RAS_0.1.8.zip",          # path to the downloaded zip
+  "RAS_0.1.12.zip",         # path to the downloaded zip
   repos = NULL,
   type  = "win.binary"
 )
@@ -101,6 +102,25 @@ result <- ras(
 print(result)              # detected changepoint positions
 plot(result)               # full-chromosome scan profile
 plot(result, zoom = TRUE)  # zoomed view around each changepoint
+```
+
+### Binary traits: fast score test
+
+For binary (case/control) traits, the per-window scan defaults to a logistic
+regression (`scan_test = "glm"`). On large samples this Wald path is the main
+cost. Passing `scan_test = "score"` uses a Rao score test that fits the
+covariate-only null model once and evaluates each window in closed form —
+substantially faster with essentially the same detected regions:
+
+```r
+result <- ras(
+  geno, phenotype, covariates,
+  covariate_cols = c("age", "sex", paste0("pc", 1:10)),
+  is_continuous  = FALSE,
+  scan_test      = "score",   # fast Rao score test for the binary scan
+  chrom          = 1,
+  save_dir       = "results/"
+)
 ```
 
 ## Step-by-step (advanced)
