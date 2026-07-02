@@ -17,6 +17,7 @@ ras(
   save_dir = "./result",
   min_window_size = 5,
   max_window_size = 100,
+  scan_test = c("glm", "score"),
   cp_p_threshold = 0.01,
   cp_window_size = 3000,
   cp_min_length = 10,
@@ -74,6 +75,13 @@ files; created recursively if it does not exist.  Default
 \item{max_window_size}{Integer. Maximum scan window half-size passed to
 \code{\link{screen_forward_max_region}}.  Default \code{100}.}
 
+\item{scan_test}{Character. Per-window test for binary traits, passed to
+\code{\link{screen_forward_max_region}}.  \code{"glm"} (default) fits a
+full logistic model per window (Wald p-value); \code{"score"} fits the
+null logistic model once and uses a Rao score test per window
+(asymptotically equivalent, much faster at scale).  Has no effect for
+continuous traits.}
+
 \item{cp_p_threshold}{Numeric. Davies test p-value threshold for
 first-pass candidate changepoints.  Default \code{0.01}.}
 
@@ -100,6 +108,11 @@ Davies tests.  Default \code{50}.}
 \item{second_p_threshold}{Numeric. Davies test p-value threshold for
 second-pass validation.  Default \code{1e-10}.}
 
+\item{min_signal}{Numeric. Minimum \eqn{-\log_{10}(p)} scan value required
+to retain a validated changepoint (passed to \code{\link{ras_validate}});
+also used as the low-signal colour boundary in all diagnostic plots.
+Default \code{2.5}.}
+
 \item{run_plots}{Logical. If \code{TRUE} (default), saves diagnostic plots
 via \code{\link{plot_ras_scan}} and \code{\link{plot_ras_zoom_regions}}.}
 
@@ -112,11 +125,6 @@ via \code{\link{plot_ras_scan}} and \code{\link{plot_ras_zoom_regions}}.}
 \item{plot_y_cap}{Numeric or \code{NULL}. If provided, the y-axis is
 capped at this value and positions above the cap are annotated with
 arrows.  Default \code{NULL} (no cap).}
-
-\item{min_signal}{Numeric. Minimum \eqn{-\log_{10}(p)} scan value required
-to retain a validated changepoint (passed to \code{\link{ras_validate}});
-also used as the low-signal colour boundary in all diagnostic plots.
-Default \code{2.5}.}
 }
 \value{
 Invisibly returns a named list with two elements:

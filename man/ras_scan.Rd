@@ -16,7 +16,8 @@ ras_scan(
   chrom = 1,
   save_dir = "./result",
   min_window_size = 5,
-  max_window_size = 100
+  max_window_size = 100,
+  scan_test = c("glm", "score")
 )
 }
 \arguments{
@@ -60,6 +61,13 @@ files; created recursively if it does not exist.  Default
 
 \item{max_window_size}{Integer. Maximum scan window half-size passed to
 \code{\link{screen_forward_max_region}}.  Default \code{100}.}
+
+\item{scan_test}{Character. Per-window test for binary traits, passed to
+\code{\link{screen_forward_max_region}}.  \code{"glm"} (default) fits a
+full logistic model per window (Wald p-value); \code{"score"} fits the
+null logistic model once and uses a Rao score test per window
+(asymptotically equivalent, much faster at scale).  Has no effect for
+continuous traits.}
 }
 \value{
 Invisibly returns a named list with two elements:
@@ -68,7 +76,7 @@ Invisibly returns a named list with two elements:
     \texttt{skip1} \rceil}. The SNP position index grid
 \code{seq(1, N, by = skip1)}.}
 \item{\code{y}}{Numeric vector, same length as \code{x}. Averaged
-\eqn{-\log_{10}(p)}-value profile across all \code{num_rep}
+\eqn{-\log_{10}(p)}-value profile across all \strong{num_rep}
 repetitions.}
 }
 The following \code{.rds} files are written to \code{save_dir}:
@@ -81,7 +89,7 @@ averaged \eqn{-\log_{10}(p)} vector \code{y}.}
 }
 \description{
 Computes the averaged \eqn{-\log_{10}(p)}-value profile over
-\code{num_rep} independent 50/50 train/hold-out splits.
+\strong{num_rep} independent 50/50 train/hold-out splits.
 }
 \details{
 For each of the \strong{num_rep} repetitions the function performs three
@@ -107,7 +115,7 @@ regresses them against the hold-out phenotype, and records the minimum
 }
 
 The \eqn{-\log_{10}(p)} vectors from all repetitions are summed and
-divided by \code{num_rep} to form the final profile.
+divided by \strong{num_rep} to form the final profile.
 
 For \strong{continuous traits} (\code{is_continuous = TRUE}), covariates
 are residualised from the training phenotype using only training

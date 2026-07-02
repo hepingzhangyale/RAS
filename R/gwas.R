@@ -1,3 +1,17 @@
+# Internal helper: which columns of a matrix contain at least one NA.
+.col_any_na <- function(M) {
+  (colSums(is.na(M)) > 0L)
+}
+
+# Internal helper: drop a term (e.g. "this.x") from a formula RHS string,
+# robust to spacing/order. Returns "1" if nothing remains.
+.drop_term <- function(rhs, drop) {
+  tl <- attr(stats::terms(stats::as.formula(paste("~", rhs))), "term.labels")
+  tl <- setdiff(tl, drop)
+  if (length(tl) == 0L) return("1")
+  paste(tl, collapse = " + ")
+}
+
 #' Compute Per-SNP GWAS Effect Size Weights
 #'
 #' Runs a per-SNP regression on the training split to obtain effect-size
@@ -37,7 +51,12 @@
 #' to obtain a linear probability approximation to the effect size; this is
 #' consistent with standard GWAS practice for weight derivation.
 #'
-#' A progress message is printed every 10,000 SNPs.
+#' Both branches are vectorised: instead of fitting one \code{lm} per SNP, all
+#' NA-free SNPs are solved in closed form with a single BLAS cross-product
+#' (continuous) or a batched Frisch-Waugh-Lovell residualisation (binary).
+#' SNP columns that contain missing dosages are handled individually so the
+#' result matches \code{lm} + \code{na.omit} exactly.  A single
+#' \dQuote{Starting GWAS ...} message is printed.
 #'
 #' @return
 #' A numeric matrix with \eqn{N} rows and 4 columns:
@@ -82,27 +101,132 @@ compute_gwas_weights <- function(geno, phenotype1, this.sample, this.df,
   }
 
   N <- ncol(geno)
-  coef.mat <- matrix(NA, nrow = N, ncol = 4)
-
+  coef.mat <- matrix(NA_real_, nrow = N, ncol = 4)
   cat("Starting GWAS ... \n")
 
-  for (i in 1:N) {
-    if (i %% 10000 == 0) { print(i) }
+  # Training-split genotype submatrix (m x N), shared by both branches.
+  Xg <- geno[this.sample, , drop = FALSE]
+  m  <- length(this.sample)
 
-    this.x <- geno[this.sample, i]
+  if (is_continuous) {
+    # ── Vectorized simple regression  y ~ x_j  (with intercept), NA-dropped ──
+    # phenotype1 is already covariate-residualised, so each SNP model is the
+    # closed-form OLS of y on x_j. All NA-free SNPs are solved with one BLAS
+    # matmul (crossprod), reproducing lm()'s Estimate/SE/t/p exactly (df = n-2).
+    y      <- as.numeric(phenotype1)
+    na_col <- .col_any_na(Xg)
 
-    if (is_continuous) {
-      fit <- lm(phenotype1[is.na(this.x) == FALSE] ~ na.omit(this.x))
-    } else {
-      this.df.sub          <- this.df[this.sample, ]
-      this.df.sub$this.x   <- this.x
-      this.df.sub$phenotype1 <- phenotype1
-      clean_df             <- na.omit(this.df.sub)
-      fit_formula          <- as.formula(paste("phenotype1 ~", covariate_formula))
-      fit                  <- lm(fit_formula, data = clean_df)
+    # (a) NA-free columns: a single BLAS matmul covers all of them at once.
+    clean <- which(!na_col)
+    if (length(clean) > 0L) {
+      Xc  <- Xg[, clean, drop = FALSE]
+      yc  <- y - mean(y)
+      Xc  <- sweep(Xc, 2L, colMeans(Xc), "-")
+      Sxx <- colSums(Xc * Xc)
+      Sxy <- as.numeric(crossprod(Xc, yc))   # t(Xc) %*% yc  — the heavy step
+      Syy <- sum(yc * yc)
+      df  <- m - 2L
+      beta <- Sxy / Sxx
+      RSS  <- Syy - beta * Sxy
+      RSS[RSS < 0] <- 0
+      SE   <- sqrt((RSS / df) / Sxx)
+      tval <- beta / SE
+      pval <- 2 * stats::pt(-abs(tval), df = df)
+      ok   <- is.finite(Sxx) & Sxx > 0 & df > 0L   # guard monomorphic columns
+      block <- cbind(beta, SE, tval, pval)
+      block[!ok, ] <- NA_real_
+      coef.mat[clean, ] <- block
     }
 
-    coef.mat[i, ] <- summary(fit)$coefficients[2, ]
+    # (b) columns with NA: handled individually to match lm + na.omit exactly.
+    for (i in which(na_col)) {
+      xi   <- Xg[, i]
+      keep <- !is.na(xi)
+      ni   <- sum(keep)
+      if (ni < 3L) next
+      xk <- xi[keep]; yk <- y[keep]
+      xk <- xk - mean(xk); yk <- yk - mean(yk)
+      sxx <- sum(xk * xk)
+      if (!is.finite(sxx) || sxx <= 0) next
+      sxy <- sum(xk * yk); syy <- sum(yk * yk)
+      dfi <- ni - 2L
+      b   <- sxy / sxx
+      rss <- max(syy - b * sxy, 0)
+      se  <- sqrt((rss / dfi) / sxx)
+      tt  <- b / se
+      coef.mat[i, ] <- c(b, se, tt, 2 * stats::pt(-abs(tt), df = dfi))
+    }
+
+  } else {
+    # ── Binary trait: lm(y ~ this.x + covariates) via Frisch–Waugh–Lovell ────
+    # Residualise y and each SNP against the covariate design W, then do a
+    # simple regression on the residuals. FWL guarantees the SNP coefficient,
+    # its SE, t and p equal the `this.x` row of the full lm fit, provided the
+    # full-model residual df = n - (rank(W) + 1) is used.
+    cov_rhs  <- .drop_term(covariate_formula, "this.x")
+    cov_form <- stats::as.formula(paste("~", cov_rhs))
+
+    # Base completeness over the training split: drop rows with NA in the
+    # phenotype or ANY column of this.df — matches the original
+    # na.omit(this.df.sub) contract (this.df.sub = this.df cols + this.x + pheno).
+    base_df <- this.df[this.sample, , drop = FALSE]
+    base_df$phenotype1 <- as.numeric(phenotype1)
+    base_ok <- stats::complete.cases(base_df)
+    base_df <- base_df[base_ok, , drop = FALSE]
+
+    Wb   <- stats::model.matrix(cov_form, data = base_df)  # incl. intercept
+    qrWb <- qr(Wb)
+    yb   <- base_df$phenotype1
+    ryb  <- qr.resid(qrWb, yb)
+    pW   <- qrWb$rank                  # rank of covariate design (incl intercept)
+    nB   <- length(yb)
+
+    Xb         <- Xg[base_ok, , drop = FALSE]
+    na_in_base <- .col_any_na(Xb)
+
+    # (a) SNP columns complete on the base rows: shared QR + batched residualize.
+    clean <- which(!na_in_base)
+    if (length(clean) > 0L) {
+      rX   <- qr.resid(qrWb, Xb[, clean, drop = FALSE])
+      Srxx <- colSums(rX * rX)
+      Srxy <- as.numeric(crossprod(rX, ryb))
+      Syy  <- sum(ryb * ryb)
+      df   <- nB - (pW + 1L)           # n - rank(full design)
+      beta <- Srxy / Srxx
+      RSS  <- Syy - beta * Srxy
+      RSS[RSS < 0] <- 0
+      SE   <- sqrt((RSS / df) / Srxx)
+      tval <- beta / SE
+      pval <- 2 * stats::pt(-abs(tval), df = df)
+      ok   <- is.finite(Srxx) & Srxx > 0 & df > 0L
+      block <- cbind(beta, SE, tval, pval)
+      block[!ok, ] <- NA_real_
+      coef.mat[clean, ] <- block
+    }
+
+    # (b) SNP columns with NA dosage: own row set + own QR (exact na.omit match).
+    for (i in which(na_in_base)) {
+      xi   <- Xb[, i]
+      keep <- !is.na(xi)
+      sub  <- base_df[keep, , drop = FALSE]
+      ni   <- nrow(sub)
+      if (ni < 4L) next
+      Wi   <- stats::model.matrix(cov_form, data = sub)
+      qrWi <- qr(Wi)
+      pWi  <- qrWi$rank
+      dfi  <- ni - (pWi + 1L)
+      if (dfi <= 0L) next
+      ryi  <- qr.resid(qrWi, sub$phenotype1)
+      rxi  <- qr.resid(qrWi, xi[keep])
+      srxx <- sum(rxi * rxi)
+      if (!is.finite(srxx) || srxx <= 0) next
+      srxy <- sum(rxi * ryi)
+      b    <- srxy / srxx
+      rss  <- max(sum(ryi * ryi) - b * srxy, 0)
+      se   <- sqrt((rss / dfi) / srxx)
+      tt   <- b / se
+      coef.mat[i, ] <- c(b, se, tt, 2 * stats::pt(-abs(tt), df = dfi))
+    }
   }
 
   colnames(coef.mat) <- c("Estimate", "Std. Error", "t value", "Pr(>|t|)")
@@ -166,7 +290,7 @@ compute_gwas_weights <- function(geno, phenotype1, this.sample, this.df,
 #' stopifnot(pgs_mat[1, 1] == geno[leftout[1], 1] * weights[1])
 #' @export
 compute_pgs_matrix <- function(geno, this.leftout, pgs.weights) {
-  geno[is.na(geno)] <- 0
+  geno[is.na(geno)] <- 0L
   pgs.mat <- matrix(data = NA, nrow = length(this.leftout), ncol = ncol(geno))
   for (i in 1:length(this.leftout)) {
     pgs.mat[i, ] <- geno[this.leftout[i], ] * pgs.weights

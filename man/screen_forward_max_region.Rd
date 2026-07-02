@@ -22,6 +22,7 @@ screen_forward_max_region(
   skip2 = 5,
   is_continuous,
   covariate_formula = NULL,
+  scan_test = c("glm", "score"),
   signal.starts = NULL,
   signal.window.size = NULL
 )
@@ -36,7 +37,7 @@ screen_forward_max_region(
 
 \item{this.df}{Data frame containing the hold-out phenotype in a column
 named \code{phenotype2} and any covariate columns named in
-\strong{covariate_formula}.  Rows must correspond to hold-out individuals.}
+\code{covariate_formula}.  Rows must correspond to hold-out individuals.}
 
 \item{num_signals}{Integer. Number of true signals; used only for
 simulation plots (\code{isSimulation = TRUE}) to draw reference lines.
@@ -75,13 +76,26 @@ Default \code{100}.}
 \item{skip2}{Integer. Step size for growing the window within each grid
 position.  Default \code{5}.}
 
-\item{is_continuous}{Logical. If \code{TRUE}, fits \code{lm}; otherwise
-\code{glm(family = binomial())}.}
+\item{is_continuous}{Logical. If \code{TRUE}, the per-window PGS p-value is
+obtained from a linear model via an exact Frisch-Waugh-Lovell
+residualisation (numerically identical to \code{lm(phenotype2 ~ this.pgs +
+  covariates)} but the covariate factorisation is done once instead of per
+window).  If \code{FALSE}, a binary trait is used (see \code{scan_test}).}
 
 \item{covariate_formula}{Character. Right-hand side covariates (without
 the PGS term \code{this.pgs}) in the scan regression formula.  If
 \code{NULL}, a default formula with sex, age, age-squared, age-sex
 interaction, and the first ten ancestry PCs is used.}
+
+\item{scan_test}{Character. Test used for the binary branch
+(\code{is_continuous = FALSE}).  \code{"glm"} (default) fits a full
+logistic regression per window and reports the Wald p-value of the PGS
+term, preserving the original behaviour.  \code{"score"} fits the
+covariate-only null logistic model \strong{once} and evaluates a Rao
+score test for the PGS term at each window, which is asymptotically
+equivalent but avoids per-window iterative fitting (typically 1-2 orders
+of magnitude faster at scale).  Ignored when \code{is_continuous = TRUE}
+(the continuous branch always uses \code{lm}).}
 
 \item{signal.starts}{Integer vector. True signal start positions for
 simulation reference lines.  Default \code{NULL}.}
@@ -102,7 +116,7 @@ at each position.
 \details{
 At each grid position \eqn{j \in \{1, 1 + \texttt{skip1}, \ldots, N\}}
 the function builds a polygenic score (PGS) by accumulating columns of
-\strong{pgs.mat} from a growing symmetric window
+\code{pgs.mat} from a growing symmetric window
 \eqn{[j - w + 1,\; j + w - 1]} for
 \eqn{w \in \{0, \texttt{min\_window\_size}, \ldots, \texttt{max\_window\_size}\}}.
 The accumulation is incremental: only the newly added columns are summed

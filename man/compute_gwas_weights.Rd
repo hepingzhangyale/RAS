@@ -68,7 +68,12 @@ than \code{glm(family = binomial)} is used at the GWAS weight stage
 to obtain a linear probability approximation to the effect size; this is
 consistent with standard GWAS practice for weight derivation.
 
-A progress message is printed every 10,000 SNPs.
+Both branches are vectorised: instead of fitting one \code{lm} per SNP, all
+NA-free SNPs are solved in closed form with a single BLAS cross-product
+(continuous) or a batched Frisch-Waugh-Lovell residualisation (binary).
+SNP columns that contain missing dosages are handled individually so the
+result matches \code{lm} + \code{na.omit} exactly.  A single
+\dQuote{Starting GWAS ...} message is printed.
 }
 \examples{
 set.seed(1)

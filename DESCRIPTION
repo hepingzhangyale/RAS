@@ -1,6 +1,6 @@
 Package: RAS
 Title: Regional Association Score for Genome-Wide Association Studies
-Version: 0.1.8
+Version: 0.1.12
 Authors@R: c(
     person("Yiran", "Jiang", email = "yiran.jiang@uky.edu", role = "aut"),
     person("Jiahe", "Jin", email = "jiahe.jin@yale.edu", role = c("aut", "cre")),

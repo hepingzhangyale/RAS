@@ -14,7 +14,7 @@ ras_memory(
 )
 }
 \arguments{
-\item{n_total}{Integer. Total number of samples (rows of \strong{geno}).}
+\item{n_total}{Integer. Total number of samples (rows of \code{geno}).}
 
 \item{n_train}{Integer. Number of training-split samples (typically
 \code{n_total / 2}).}
@@ -22,7 +22,7 @@ ras_memory(
 \item{n_holdout}{Integer. Number of hold-out samples (rows of
 \code{pgs.mat}; typically \code{n_total - n_train}).}
 
-\item{n_snps}{Integer. Number of variants (columns of \strong{geno}).}
+\item{n_snps}{Integer. Number of variants (columns of \code{geno}).}
 
 \item{bytes_per_element}{Numeric. Bytes per matrix element.  Default
 \code{8} (R \code{double}).}

@@ -22,8 +22,8 @@ centred at \code{x0}.  If multiple positions tie for the maximum,
 \code{\link[base]{which.max}} returns the first.
 }
 \description{
-Returns the index of the maximum value of \strong{y} within a symmetric
-window of half-width \strong{window.size} centred at \strong{x0}.
+Returns the index of the maximum value of \code{y} within a symmetric
+window of half-width \code{window.size} centred at \code{x0}.
 }
 \details{
 This function is used by \code{\link{ras_detect}}

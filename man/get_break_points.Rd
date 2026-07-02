@@ -10,10 +10,10 @@ get_break_points(x, y, t)
 \item{x}{Numeric vector. Predictor (e.g., SNP position indices).}
 
 \item{y}{Numeric vector. Response (e.g., \eqn{-\log_{10}(p)}-values from
-a scan). Must be the same length as \strong{x}.}
+a scan). Must be the same length as \code{x}.}
 
-\item{t}{Integer. Number of observations to use from the start of \strong{x}
-and \strong{y}. Must satisfy \code{t >= 4} for segmented regression to be
+\item{t}{Integer. Number of observations to use from the start of \code{x}
+and \code{y}. Must satisfy \code{t >= 4} for segmented regression to be
 identifiable.}
 }
 \value{
@@ -46,8 +46,8 @@ Both the \code{segmented} call and the Davies test are wrapped in
 data or a degenerate window), the function returns \code{p.values = 1} and
 \code{NULL} for the breakpoint and slopes rather than propagating an error.
 
-The breakpoint position is returned as an index into the full \strong{x}
-vector (not just the first \strong{t} elements), found by locating the
+The breakpoint position is returned as an index into the full \code{x}
+vector (not just the first \code{t} elements), found by locating the
 element of \code{x[1:t]} closest to the estimated breakpoint coordinate.
 }
 \examples{

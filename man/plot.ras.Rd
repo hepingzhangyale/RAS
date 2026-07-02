@@ -46,8 +46,9 @@ units (zoom plot only).  Default \code{3000}.}
 Default \code{3}.}
 
 \item{min_signal}{Numeric. Low-signal colour boundary on the
-\eqn{-\log_{10}} scale, passed to both plot functions.  Should match
-the value used in \code{\link{ras_validate}}.  Default \code{2.5}.}
+\eqn{-\log_{10}} scale: scan values below this threshold are drawn in
+blue; values at or above it are drawn in yellow or higher.  Should match
+the value passed to \code{\link{ras_validate}}.  Default \code{2.5}.}
 
 \item{...}{Currently unused.}
 }

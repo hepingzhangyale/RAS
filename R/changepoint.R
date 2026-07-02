@@ -262,10 +262,16 @@ ras_detect <- function(x, y, p.values.threshold = 0.01,
   start.t <- min.length - window_size
 
   while (TRUE) {
-    this.seq <- seq(start.t, length(x) - min.length + 1, by = skip)
+    end.point <- length(x) - min.length + 1
+    # If a detected changepoint landed at/after the last scannable start position,
+    # there is nothing left to scan: stop cleanly instead of building a reverse
+    # seq() (start > end with a positive `by`), which would error.
+    if (start.t > end.point) break
 
-    if (this.seq[length(this.seq)] != length(x) - min.length + 1) {
-      this.seq <- c(this.seq, length(x) - min.length + 1)
+    this.seq <- seq(start.t, end.point, by = skip)
+
+    if (this.seq[length(this.seq)] != end.point) {
+      this.seq <- c(this.seq, end.point)
     }
 
     for (start.t in this.seq) {

@@ -32,6 +32,12 @@
 #'   \code{\link{screen_forward_max_region}}.  Default \code{5}.
 #' @param max_window_size Integer. Maximum scan window half-size passed to
 #'   \code{\link{screen_forward_max_region}}.  Default \code{100}.
+#' @param scan_test Character. Per-window test for binary traits, passed to
+#'   \code{\link{screen_forward_max_region}}.  \code{"glm"} (default) fits a
+#'   full logistic model per window (Wald p-value); \code{"score"} fits the
+#'   null logistic model once and uses a Rao score test per window
+#'   (asymptotically equivalent, much faster at scale).  Has no effect for
+#'   continuous traits.
 #'
 #' @details
 #' For each of the \strong{num_rep} repetitions the function performs three
@@ -144,8 +150,10 @@ ras_scan <- function(geno, phenotype, covariates, covariate_cols,
                          chrom          = 1,
                          save_dir       = "./result",
                          min_window_size = 5,
-                         max_window_size = 100) {
+                         max_window_size = 100,
+                         scan_test       = c("glm", "score")) {
 
+  scan_test <- match.arg(scan_test)
   if (!dir.exists(save_dir)) dir.create(save_dir, recursive = TRUE)
 
   n <- nrow(geno)
@@ -228,7 +236,8 @@ ras_scan <- function(geno, phenotype, covariates, covariate_cols,
       skip1             = skip1,
       skip2             = skip2,
       is_continuous     = is_continuous,
-      covariate_formula = scan_formula
+      covariate_formula = scan_formula,
+      scan_test         = scan_test
     )
 
     full.p.values <- full.p.values + return.p.values
@@ -393,6 +402,7 @@ ras <- function(geno, phenotype, covariates, covariate_cols,
                              save_dir              = "./result",
                              min_window_size       = 5,
                              max_window_size       = 100,
+                             scan_test             = c("glm", "score"),
                              cp_p_threshold        = 0.01,
                              cp_window_size        = 3000,
                              cp_min_length         = 10,
@@ -407,6 +417,8 @@ ras <- function(geno, phenotype, covariates, covariate_cols,
                              plot_p_threshold      = 8,
                              plot_y_cap            = NULL) {
 
+  scan_test <- match.arg(scan_test)
+
   # ── Stage 1: scan ─────────────────────────────────────────────────────────
   scan <- ras_scan(
     geno            = geno,
@@ -420,7 +432,8 @@ ras <- function(geno, phenotype, covariates, covariate_cols,
     chrom           = chrom,
     save_dir        = save_dir,
     min_window_size = min_window_size,
-    max_window_size = max_window_size
+    max_window_size = max_window_size,
+    scan_test       = scan_test
   )
 
   x <- scan$x
