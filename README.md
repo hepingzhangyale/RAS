@@ -2,7 +2,7 @@
 <p align="center">
   <img src="ras_workflow.png" width="100%" alt="Regional Association Score workflow">
 </p>
-The **RAS** package implements the Regional Association Score method for genome-wide association studies. It converts per-SNP effect sizes into a genomic −log₁₀(*p*) time series and applies changepoint detection to locate peaks that mark significant association regions. The method supports both continuous and binary traits.
+The <strong>RAS</strong> package implements the Regional Association Score method for genome-wide association studies. It converts per-SNP effect sizes into a genomic −log₁₀(*p*) time series and applies changepoint detection to locate peaks that mark significant association regions. The method supports both continuous and binary traits.
 
 If you use this package in your research, please cite:
 
