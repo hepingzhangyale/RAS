@@ -171,6 +171,19 @@ plot(result)
 
 ---
 
+## Example
+
+A worked, real-data walk-through on a Duroc pig GWAS dataset (backfat thickness,
+352 pigs, 36,120 SNPs) is in
+[`examples/pig-example`](examples/pig-example). It goes from raw PLINK files
+through data preview and PLINK marginal GWAS to running RAS two ways.
+
+> **Note:** the example's detected region and result figures are withheld pending
+> publication of the associated paper — the notebook shows the data and how to run
+> RAS, with the result cells left unexecuted.
+
+---
+
 ## Citation
 
 If you use RAS in your research, please cite:
