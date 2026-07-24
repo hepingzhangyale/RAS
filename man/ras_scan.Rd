@@ -14,7 +14,7 @@ ras_scan(
   skip1 = 10,
   skip2 = 20,
   chrom = 1,
-  save_dir = "./result",
+  save_dir = file.path(tempdir(), "RAS"),
   min_window_size = 5,
   max_window_size = 100,
   scan_test = c("glm", "score")
@@ -53,8 +53,9 @@ position.  Default \code{20}.}
 Default \code{1}.}
 
 \item{save_dir}{Character. Directory for intermediate \code{.rds} output
-files; created recursively if it does not exist.  Default
-\code{"./result"}.}
+files; created recursively if it does not exist.  Defaults to a
+per-session subdirectory of \code{\link[base]{tempdir}()}; set an explicit
+path to keep the outputs.}
 
 \item{min_window_size}{Integer. Minimum scan window half-size passed to
 \code{\link{screen_forward_max_region}}.  Default \code{5}.}
@@ -145,7 +146,7 @@ cov_df$age_squared <- cov_df$age^2
 cov_df$age_sex     <- cov_df$age * cov_df$sex
 for (i in 1:10) cov_df[[paste0("pc", i)]] <- rnorm(n_samp)
 
-scan <- run_ras_scan(
+scan <- ras_scan(
   geno            = geno,
   phenotype       = pheno,
   covariates      = cov_df,

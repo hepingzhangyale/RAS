@@ -72,30 +72,6 @@ the number of changepoints is not a multiple of \code{ncol}.
 
 The output file is named \code{chr-<chrom>-zoom.<ext>}.
 }
-\examples{
-set.seed(7)
-x <- seq(1, 500, by = 10)
-y <- c(seq(0, 9, length.out = 25), seq(9, 1, length.out = 25)) +
-     rnorm(50, sd = 0.4)
-
-detection <- list(
-  tau_hats         = x[25],
-  all.changepoints = x[c(20, 25, 30)],
-  all.p.values     = c(5, 12, 4),
-  left.slopes      = 0.32,
-  right.slopes     = -0.28
-)
-
-plot_ras_zoom_regions(
-  x                = x,
-  y                = y,
-  detection.result = detection,
-  this_chrom       = 1,
-  save.directory   = tempdir(),
-  zoom_half_width  = 100,
-  device           = "screen"
-)
-}
 \seealso{
 \code{\link{plot_ras_scan}} for the full-chromosome overview plots.
 \code{\link{ras}} which calls this function automatically.

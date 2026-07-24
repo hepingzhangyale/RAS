@@ -64,23 +64,26 @@ full-chromosome scan profile with detected changepoints marked.  When
 detected changepoint.
 }
 \examples{
-\donttest{
+## Build a minimal "ras" object by hand (see ras() for the full pipeline)
 set.seed(7)
-n_samp <- 80; n_snp <- 60
-geno <- matrix(
-  sample(0:2, n_samp * n_snp, replace = TRUE, prob = c(0.6, 0.3, 0.1)),
-  nrow = n_samp, ncol = n_snp)
-pheno  <- rnorm(n_samp)
-cov_df <- data.frame(age = rnorm(n_samp), sex = rbinom(n_samp, 1, 0.5))
-
-result <- ras(geno, pheno, cov_df,
-              covariate_cols = c("age", "sex"),
-              is_continuous = TRUE, num_rep = 2,
-              chrom = 1, save_dir = tempdir(), run_plots = FALSE)
+xg <- seq(1, 2000, by = 10)
+yg <- c(seq(0, 9, length.out = length(xg) \%/\% 2),
+        seq(9, 1, length.out = length(xg) - length(xg) \%/\% 2)) +
+      rnorm(length(xg), sd = 0.4)
+detection <- list(
+  tau_hats         = xg[100],
+  all.changepoints = xg[c(95, 100, 105)],
+  all.p.values     = c(5, 12, 4),
+  left.slopes      = 0.3,
+  right.slopes     = -0.3
+)
+result <- structure(
+  list(scan = list(x = xg, y = yg), detection = detection,
+       chrom = 1, save_dir = tempdir()),
+  class = "ras")
 
 plot(result, device = "screen")
 plot(result, zoom = TRUE, device = "screen")
-}
 }
 \seealso{
 \code{\link{ras}} for the function that produces the

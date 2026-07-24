@@ -13,9 +13,13 @@ If you use this package in your research, please cite:
 
 ## Installation
 
-### Method 1 — From GitHub via `remotes` (recommended)
+### From CRAN (recommended)
 
-`remotes` is a lightweight alternative to `devtools` with no extra dependencies.
+```r
+install.packages("RAS")
+```
+
+### From GitHub
 
 ```r
 # install remotes if you don't have it
@@ -24,59 +28,17 @@ install.packages("remotes")
 remotes::install_github("hepingzhangyale/RAS")
 ```
 
-### Method 2 — From GitHub via `devtools`
-
-```r
-# install devtools if you don't have it
-install.packages("devtools")
-
-devtools::install_github("hepingzhangyale/RAS")
-```
-
-### Method 3 — Clone and install from source
-
-Use this when you need a specific branch, want to inspect the code before installing,
-or are working on a machine without direct GitHub access.
-
-```bash
-# 1. clone the repository
-git clone https://github.com/hepingzhangyale/RAS.git
-
-# 2. install from local source (run inside R)
-```
-
-```r
-devtools::install("path/to/RAS")   # replace with your local clone path
-# e.g. devtools::install("C:/Users/you/RAS")
-```
-
-> **Windows note:** source installation requires
-> [Rtools](https://cran.r-project.org/bin/windows/Rtools/) to be installed.
-> Download the version matching your R installation and make sure it is on the PATH.
-
-### Method 4 — Windows binary zip (no compiler required)
-
-Download the pre-built `.zip` from the
-[Releases](https://github.com/hepingzhangyale/RAS/releases) page, then install locally:
-
-```r
-install.packages(
-  "RAS_0.1.12.zip",         # path to the downloaded zip
-  repos = NULL,
-  type  = "win.binary"
-)
-```
-
 ---
 
 ## Dependencies
 
-RAS imports two packages that are installed automatically:
+RAS imports the following packages, which are installed automatically:
 
 | Package | Role |
 |---------|------|
 | `segmented` | Segmented regression and Davies test for changepoint detection |
 | `parallel` | CPU core detection used by `ras_memory()` diagnostics |
+| `stats`, `graphics`, `grDevices` | Base R statistics and plotting |
 
 If automatic installation fails, install them manually first:
 

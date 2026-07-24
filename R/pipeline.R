@@ -26,8 +26,9 @@
 #' @param chrom Integer. Chromosome number used in saved file names.
 #'   Default \code{1}.
 #' @param save_dir Character. Directory for intermediate \code{.rds} output
-#'   files; created recursively if it does not exist.  Default
-#'   \code{"./result"}.
+#'   files; created recursively if it does not exist.  Defaults to a
+#'   per-session subdirectory of \code{\link[base]{tempdir}()}; set an explicit
+#'   path to keep the outputs.
 #' @param min_window_size Integer. Minimum scan window half-size passed to
 #'   \code{\link{screen_forward_max_region}}.  Default \code{5}.
 #' @param max_window_size Integer. Maximum scan window half-size passed to
@@ -122,7 +123,7 @@
 #' cov_df$age_sex     <- cov_df$age * cov_df$sex
 #' for (i in 1:10) cov_df[[paste0("pc", i)]] <- rnorm(n_samp)
 #'
-#' scan <- run_ras_scan(
+#' scan <- ras_scan(
 #'   geno            = geno,
 #'   phenotype       = pheno,
 #'   covariates      = cov_df,
@@ -148,7 +149,7 @@ ras_scan <- function(geno, phenotype, covariates, covariate_cols,
                          skip1          = 10,
                          skip2          = 20,
                          chrom          = 1,
-                         save_dir       = "./result",
+                         save_dir       = file.path(tempdir(), "RAS"),
                          min_window_size = 5,
                          max_window_size = 100,
                          scan_test       = c("glm", "score")) {
@@ -171,8 +172,7 @@ ras_scan <- function(geno, phenotype, covariates, covariate_cols,
   full.p.values <- rep(0, length(this.seq))
 
   for (this.rep in seq_len(num_rep)) {
-    cat("==============================\n")
-    cat(" Repetition", this.rep, "/", num_rep, "\n")
+    message("============================== Repetition ", this.rep, " / ", num_rep)
 
     # 50/50 random split
     this.sample  <- sort(sample(n, n %/% 2))
@@ -250,7 +250,7 @@ ras_scan <- function(geno, phenotype, covariates, covariate_cols,
   saveRDS(mean.p.values,
     file.path(save_dir,
       paste0("mean_p_values_chr", chrom, "_reps1-", num_rep, ".rds")))
-  cat("Scanning complete!\n")
+  message("Scanning complete!")
 
   invisible(list(x = this.seq, y = mean.p.values))
 }
@@ -399,7 +399,7 @@ ras <- function(geno, phenotype, covariates, covariate_cols,
                              skip1                 = 10,
                              skip2                 = 20,
                              chrom                 = 1,
-                             save_dir              = "./result",
+                             save_dir              = file.path(tempdir(), "RAS"),
                              min_window_size       = 5,
                              max_window_size       = 100,
                              scan_test             = c("glm", "score"),
@@ -440,8 +440,7 @@ ras <- function(geno, phenotype, covariates, covariate_cols,
   y <- scan$y
 
   # ── Stage 2: first-pass changepoint detection ──────────────────────────────
-  cat("==============================\n")
-  cat(" Changepoint Detection (Pass 1)\n")
+  message("============================== Changepoint Detection (Pass 1)")
   cp_result <- ras_detect(
     x                              = x,
     y                              = y,
@@ -454,8 +453,7 @@ ras <- function(geno, phenotype, covariates, covariate_cols,
   )
 
   # ── Stage 3: second-pass validation ───────────────────────────────────────
-  cat("==============================\n")
-  cat(" Changepoint Validation (Pass 2)\n")
+  message("============================== Changepoint Validation (Pass 2)")
   detection <- ras_validate(
     this.result        = cp_result,
     x                  = x,
@@ -468,12 +466,12 @@ ras <- function(geno, phenotype, covariates, covariate_cols,
   )
 
   n_detected <- length(detection$tau_hats)
-  cat("==============================\n")
   if (n_detected == 0) {
-    cat(" No changepoints detected.\n")
+    message("============================== No changepoints detected.")
   } else {
-    cat(sprintf(" Detected %d changepoint(s) at position(s): %s\n",
-                n_detected, paste(detection$tau_hats, collapse = ", ")))
+    message(sprintf(
+      "============================== Detected %d changepoint(s) at position(s): %s",
+      n_detected, paste(detection$tau_hats, collapse = ", ")))
   }
 
   result <- structure(
@@ -483,17 +481,16 @@ ras <- function(geno, phenotype, covariates, covariate_cols,
 
   # ── Stage 4: plots ────────────────────────────────────────────────────────
   if (run_plots) {
-    cat(" Generating plots...\n")
+    message(" Generating plots...")
     plot.ras(result, zoom = FALSE, device = plot_device,
              p.threshold = plot_p_threshold, y_cap = plot_y_cap,
              min_signal  = min_signal)
     plot.ras(result, zoom = TRUE,  device = plot_device,
              p.threshold = plot_p_threshold, min_signal = min_signal)
-    cat(sprintf(" Plots saved to: %s\n", save_dir))
+    message(sprintf(" Plots saved to: %s", save_dir))
   }
 
-  cat("==============================\n")
-  cat(" Pipeline complete.\n")
+  message("============================== Pipeline complete.")
 
   invisible(result)
 }

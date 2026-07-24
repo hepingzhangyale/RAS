@@ -10,14 +10,14 @@ screen_forward_max_region(
   this.df,
   num_signals,
   start.point = 1,
-  save.directory = "simulation",
+  save.directory = tempdir(),
   this.chrome = 1,
   min_window_size = 5,
   max_window_size = 100,
   isSimulation = TRUE,
   this.repetition = 1,
   screening_round = 1,
-  isPlot = TRUE,
+  isPlot = FALSE,
   skip1 = 100,
   skip2 = 5,
   is_continuous,
@@ -46,8 +46,10 @@ Pass \code{-1} for real data.}
 \item{start.point}{Integer. Starting SNP index for the scan.
 Default \code{1}.}
 
-\item{save.directory}{Character. Directory for optional PDF plots.
-Default \code{"simulation"}.}
+\item{save.directory}{Character. Directory for optional PDF plots (only used
+when \code{isPlot = TRUE}).  Defaults to \code{\link[base]{tempdir}()} so
+nothing is written outside the session's temporary area unless the caller
+chooses an explicit path.}
 
 \item{this.chrome}{Integer. Chromosome number for non-simulation plot
 filenames.  Default \code{1}.}
@@ -64,11 +66,12 @@ filenames and draw true-signal reference lines.  Default \code{TRUE}.}
 \item{this.repetition}{Integer. Repetition index used in plot filenames.
 Default \code{1}.}
 
-\item{screening_round}{Integer. Number of forward screening rounds.
+\item{screening_round}{Integer. Number of forward screening rounds.  Only a
+single round is implemented; values other than \code{1} raise an error.
 Default \code{1}.}
 
-\item{isPlot}{Logical. If \code{TRUE}, save a PDF of the scan profile.
-Default \code{TRUE}.}
+\item{isPlot}{Logical. If \code{TRUE}, save a PDF of the scan profile to
+\code{save.directory}.  Default \code{FALSE} (no file is written).}
 
 \item{skip1}{Integer. Step size for the primary SNP position grid.
 Default \code{100}.}

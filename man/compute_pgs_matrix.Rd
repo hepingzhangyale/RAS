@@ -37,12 +37,12 @@ under a centred dosage scale and is sufficient for the forward scan, where
 the primary goal is to aggregate regional signals rather than obtain
 individual-level accuracy.
 
-The function modifies \code{geno} in the calling frame due to R's
-copy-on-modify semantics: a copy of \code{geno} is made when the
-\code{NA}-replacement assignment is executed.  Callers working with very
-large genotype matrices should be aware that this temporarily doubles the
-memory footprint of \code{geno}; use \code{\link{ras_memory}} to
-check feasibility before running.
+The caller's \code{geno} object is \strong{not} modified: the
+\code{NA}-replacement assignment triggers R's copy-on-modify semantics, so a
+local copy of \code{geno} is made inside the function.  Callers working with
+very large genotype matrices should be aware that this temporarily doubles
+the memory footprint of \code{geno} during the call; use
+\code{\link{ras_memory}} to check feasibility before running.
 }
 \examples{
 set.seed(2)

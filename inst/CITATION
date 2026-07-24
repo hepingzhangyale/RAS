@@ -1,0 +1,13 @@
+citHeader("To cite the RAS package in publications use:")
+
+bibentry(
+  bibtype = "Article",
+  title   = "Empowering genome-wide association studies via a visualizable test based on the regional association score",
+  author  = c(person("Yiran", "Jiang"), person("Heping", "Zhang")),
+  journal = "Proceedings of the National Academy of Sciences",
+  year    = "2025",
+  volume  = "122",
+  number  = "9",
+  pages   = "e2419721122",
+  doi     = "10.1073/pnas.2419721122"
+)

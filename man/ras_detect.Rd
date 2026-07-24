@@ -21,7 +21,7 @@ ras_detect(
 \item{x}{Numeric vector. Predictor sequence (e.g., SNP position indices).}
 
 \item{y}{Numeric vector. Response sequence (e.g., \eqn{-\log_{10}(p)}
-values from \code{\link{run_ras_scan}}).  Must be the same length as
+values from \code{\link{ras_scan}}).  Must be the same length as
 \code{x}.}
 
 \item{p.values.threshold}{Numeric. Davies test p-value threshold for
@@ -105,6 +105,7 @@ The function records all candidates examined (\code{all.changepoints},
 functions can display the full candidate landscape.
 }
 \examples{
+\donttest{
 set.seed(42)
 x <- 1:300
 y <- c(seq(0, 8, length.out = 150),
@@ -117,6 +118,7 @@ result <- ras_detect(
   slope.p.values.threshold.right = 1e-3
 )
 cat("Detected changepoints:", result$tau_hats, "\n")
+}
 }
 \seealso{
 \code{\link{ras_validate}} for the second-pass validation step.

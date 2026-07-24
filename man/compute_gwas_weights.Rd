@@ -57,7 +57,7 @@ For \strong{continuous traits} (\code{is_continuous = TRUE}) the function
 fits \code{lm(phenotype1 ~ this.x)} for each SNP, excluding samples with
 missing dosage via \code{na.omit}.  The covariates are assumed to have
 already been residualised from \code{phenotype1} before this function is
-called (as done in \code{\link{run_ras_scan}}).
+called (as done in \code{\link{ras_scan}}).
 
 For \strong{binary traits} (\code{is_continuous = FALSE}) the function
 builds a data frame combining the training-split rows of \code{this.df}

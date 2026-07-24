@@ -84,6 +84,7 @@ the scan grid to genomic coordinates via
 \eqn{\texttt{this.start} + (\text{index} - 1) \times \texttt{this.skip}}.
 }
 \examples{
+\donttest{
 set.seed(42)
 x <- 1:300
 y <- c(seq(0, 8, length.out = 150),
@@ -104,6 +105,7 @@ final <- ras_validate(
   p.value.threshold  = 1e-3
 )
 cat("Validated changepoints:", final$tau_hats, "\n")
+}
 }
 \seealso{
 \code{\link{ras_detect}} for the first-pass

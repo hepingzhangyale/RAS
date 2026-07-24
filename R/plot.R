@@ -36,23 +36,26 @@
 #'   \code{"ras"} object. \code{\link{print.ras}} for the console summary.
 #'
 #' @examples
-#' \donttest{
+#' ## Build a minimal "ras" object by hand (see ras() for the full pipeline)
 #' set.seed(7)
-#' n_samp <- 80; n_snp <- 60
-#' geno <- matrix(
-#'   sample(0:2, n_samp * n_snp, replace = TRUE, prob = c(0.6, 0.3, 0.1)),
-#'   nrow = n_samp, ncol = n_snp)
-#' pheno  <- rnorm(n_samp)
-#' cov_df <- data.frame(age = rnorm(n_samp), sex = rbinom(n_samp, 1, 0.5))
-#'
-#' result <- ras(geno, pheno, cov_df,
-#'               covariate_cols = c("age", "sex"),
-#'               is_continuous = TRUE, num_rep = 2,
-#'               chrom = 1, save_dir = tempdir(), run_plots = FALSE)
+#' xg <- seq(1, 2000, by = 10)
+#' yg <- c(seq(0, 9, length.out = length(xg) %/% 2),
+#'         seq(9, 1, length.out = length(xg) - length(xg) %/% 2)) +
+#'       rnorm(length(xg), sd = 0.4)
+#' detection <- list(
+#'   tau_hats         = xg[100],
+#'   all.changepoints = xg[c(95, 100, 105)],
+#'   all.p.values     = c(5, 12, 4),
+#'   left.slopes      = 0.3,
+#'   right.slopes     = -0.3
+#' )
+#' result <- structure(
+#'   list(scan = list(x = xg, y = yg), detection = detection,
+#'        chrom = 1, save_dir = tempdir()),
+#'   class = "ras")
 #'
 #' plot(result, device = "screen")
 #' plot(result, zoom = TRUE, device = "screen")
-#' }
 #' @export
 plot.ras <- function(x, zoom = FALSE, device = "pdf", p.threshold = 8,
                      y_cap = NULL, min_display_p = 1, xlim = NULL,
@@ -121,9 +124,9 @@ print.ras <- function(x, ...) {
 #' with Davies test significance at each candidate position.
 #'
 #' @param x Numeric vector. SNP position index grid from the scan
-#'   (\code{scan$x} returned by \code{\link{run_ras_scan}}).
+#'   (\code{scan$x} returned by \code{\link{ras_scan}}).
 #' @param y Numeric vector. Averaged \eqn{-\log_{10}(p)}-value profile
-#'   (\code{scan$y} returned by \code{\link{run_ras_scan}}).
+#'   (\code{scan$y} returned by \code{\link{ras_scan}}).
 #' @param detection.result List. Output from \code{\link{ras_validate}},
 #'   containing \code{tau_hats}, \code{all.changepoints}, \code{all.p.values},
 #'   \code{left.slopes}, and \code{right.slopes}.
@@ -184,38 +187,22 @@ print.ras <- function(x, ...) {
 #' @seealso
 #' \code{\link{plot_ras_zoom_regions}} for zoomed panels around each
 #' changepoint.
-#' \code{\link{run_ras_pipeline}} which calls this function automatically.
+#' \code{\link{ras}} which calls this function automatically.
 #' \code{\link{ras_validate}} whose output is passed as
 #' \code{detection.result}.
 #'
-#' @examples
-#' set.seed(7)
-#' x <- seq(1, 500, by = 10)
-#' y <- c(seq(0, 9, length.out = 25), seq(9, 1, length.out = 25)) +
-#'      rnorm(50, sd = 0.4)
-#'
-#' ## Construct a minimal detection result by hand
-#' detection <- list(
-#'   tau_hats         = x[25],
-#'   all.changepoints = x[c(20, 25, 30)],
-#'   all.p.values     = c(5, 12, 4),
-#'   left.slopes      = 0.32,
-#'   right.slopes     = -0.28
-#' )
-#'
-#' plot_ras_scan(
-#'   x                = x,
-#'   y                = y,
-#'   detection.result = detection,
-#'   this_chrom       = 1,
-#'   save.directory   = tempdir(),
-#'   p.threshold      = 8,
-#'   device           = "screen"
-#' )
 #' @keywords internal
 plot_ras_scan <- function(x, y, detection.result, this_chrom, save.directory,
                           p.threshold = 8, device = "pdf", y_cap = NULL,
                           min_display_p = 1, xlim = NULL, min_signal = 2.5) {
+
+  # Restore the caller's graphics parameters on exit. Only device = "screen"
+  # draws on the caller's active device; the pdf/png branches open and close
+  # their own device, whose par() settings are discarded when it closes.
+  if (device == "screen") {
+    oldpar <- par(no.readonly = TRUE)
+    on.exit(par(oldpar))
+  }
 
   tau_hats         <- detection.result$tau_hats
   left.slopes      <- detection.result$left.slopes
@@ -374,9 +361,9 @@ plot_ras_scan <- function(x, y, detection.result, this_chrom, save.directory,
          bty = "o", bg = "white", box.col = "grey80",
          cex = 0.72,
          legend = c(
-           sprintf("-log10(p) ≥ %.0f",        p.threshold),
-           sprintf("-log10(p) ≥ %.0f",        p.threshold / 2),
-           sprintf("-log10(p) ≥ %.1f",        min_signal),
+           sprintf("-log10(p) >= %.0f",        p.threshold),
+           sprintf("-log10(p) >= %.0f",        p.threshold / 2),
+           sprintf("-log10(p) >= %.1f",        min_signal),
            sprintf("below %.1f",                   min_signal),
            "Detected changepoint",
            "Left slope",
@@ -407,13 +394,15 @@ plot_ras_scan <- function(x, y, detection.result, this_chrom, save.directory,
 
   plot(x, y_display, type = "l", col = col_scan, lwd = 1.6,
        main  = paste0("Chr ", this_chrom,
-                      "  —  RAS Profile & Changepoint Significance"),
+                      "  -  RAS Profile & Changepoint Significance"),
        xlim  = range(x),
        ylab  = expression(-log[10](p) ~ "(RAS scan)"),
        xlab  = "SNP Index",
        ylim  = y_range)
 
   abline(h = min_signal, col = "grey60", lty = 3, lwd = 0.8)
+  text(x[1], min_signal, sprintf("min signal = %.1f", min_signal),
+       adj = c(0, -0.4), col = "grey40", cex = 0.75)
   abline(v = tau_hats,  col = "red",    lty = 2, lwd = 1.2)
 
   # mark clipped positions with upward arrows
@@ -436,6 +425,8 @@ plot_ras_scan <- function(x, y, detection.result, this_chrom, save.directory,
              col = pt_cols, lty = 2, lwd = 0.8)
 
     abline(h = p.threshold, lty = 2, col = col_high, lwd = 1)
+    text(x[1], p.threshold, sprintf("threshold: p = 1e-%g", p.threshold),
+         adj = c(0, -0.4), col = col_high, cex = 0.75)
   }
 
   axis(4)
@@ -446,7 +437,7 @@ plot_ras_scan <- function(x, y, detection.result, this_chrom, save.directory,
          cex = 0.72,
          legend = c(
            "RAS scan profile",
-           sprintf("Candidate (p ≥ 1e-%.0f)", p.threshold),
+           sprintf("Candidate (p >= 1e-%.0f)", p.threshold),
            "Candidate (weaker)",
            "Detected changepoint",
            "Significance threshold"
@@ -512,29 +503,6 @@ plot_ras_scan <- function(x, y, detection.result, this_chrom, save.directory,
 #' \code{\link{plot_ras_scan}} for the full-chromosome overview plots.
 #' \code{\link{ras}} which calls this function automatically.
 #'
-#' @examples
-#' set.seed(7)
-#' x <- seq(1, 500, by = 10)
-#' y <- c(seq(0, 9, length.out = 25), seq(9, 1, length.out = 25)) +
-#'      rnorm(50, sd = 0.4)
-#'
-#' detection <- list(
-#'   tau_hats         = x[25],
-#'   all.changepoints = x[c(20, 25, 30)],
-#'   all.p.values     = c(5, 12, 4),
-#'   left.slopes      = 0.32,
-#'   right.slopes     = -0.28
-#' )
-#'
-#' plot_ras_zoom_regions(
-#'   x                = x,
-#'   y                = y,
-#'   detection.result = detection,
-#'   this_chrom       = 1,
-#'   save.directory   = tempdir(),
-#'   zoom_half_width  = 100,
-#'   device           = "screen"
-#' )
 #' @keywords internal
 plot_ras_zoom_regions <- function(x, y, detection.result,
                                   this_chrom, save.directory,
@@ -554,6 +522,14 @@ plot_ras_zoom_regions <- function(x, y, detection.result,
   if (n_tau == 0) { message("No changepoints to zoom into."); return(invisible(NULL)) }
 
   nrow_panels <- ceiling(n_tau / ncol)
+
+  # Restore the caller's graphics parameters on exit. Only device = "screen"
+  # draws on the caller's active device; the pdf/png branches open and close
+  # their own device, whose par() settings are discarded when it closes.
+  if (device == "screen") {
+    oldpar <- par(no.readonly = TRUE)
+    on.exit(par(oldpar))
+  }
 
   # ── colour helpers ────────────────────────────────────────────────────────
   col_high  <- "#d73027"
@@ -604,7 +580,7 @@ plot_ras_zoom_regions <- function(x, y, detection.result,
     nearest <- which.min(abs(all.changepoints - tau))
     cp_pv   <- all.p.values[nearest]
     title_lbl <- if (length(cp_pv) > 0 && cp_pv > 0)
-      sprintf("Chr%d  pos %d  (1e⁻%.1f)", this_chrom, tau, cp_pv)
+      sprintf("Chr%d  pos %d  (1e-%.1f)", this_chrom, tau, cp_pv)
     else
       sprintf("Chr%d  pos %d", this_chrom, tau)
 

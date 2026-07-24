@@ -63,6 +63,20 @@ get_break_points <- function(x, y, t) {
   this.df <- data.frame(y = y[1:t], x = x[1:t])
   fit_lm <- lm(y ~ x, data = this.df)
 
+  # Degenerate input guard: if the response has (near-)zero residual variance
+  # the data already lie on a straight line (e.g. flat or perfectly linear),
+  # so there is no breakpoint to find and davies.test() / segmented() are
+  # numerically undefined here -- they can return platform-dependent values
+  # (p = 0 on some platforms, p = 1 on others) or crash. Report no signal.
+  resid_sigma <- tryCatch(suppressWarnings(summary(fit_lm)$sigma),
+                          error = function(e) 0)
+  scale_ref <- mean(abs(this.df$y), na.rm = TRUE)
+  if (!is.finite(scale_ref)) scale_ref <- 0
+  degenerate_tol <- sqrt(.Machine$double.eps) * (scale_ref + 1)
+  if (!is.finite(resid_sigma) || resid_sigma < degenerate_tol) {
+    return(list(break.points = NULL, p.values = 1, slope.left = NULL, slope.right = NULL))
+  }
+
   fit_segmented <- try({
     suppressWarnings(segmented(fit_lm, seg.Z = ~x, npsi = 1))
   }, silent = TRUE)
@@ -153,7 +167,7 @@ slope_test <- function(x, y, lower.tail) {
 #'
 #' @param x Numeric vector. Predictor sequence (e.g., SNP position indices).
 #' @param y Numeric vector. Response sequence (e.g., \eqn{-\log_{10}(p)}
-#'   values from \code{\link{run_ras_scan}}).  Must be the same length as
+#'   values from \code{\link{ras_scan}}).  Must be the same length as
 #'   \code{x}.
 #' @param p.values.threshold Numeric. Davies test p-value threshold for
 #'   nominating a candidate changepoint.  Default \code{0.01}.
@@ -231,6 +245,7 @@ slope_test <- function(x, y, lower.tail) {
 #' \code{\link{ras}} for the recommended end-to-end entry point.
 #'
 #' @examples
+#' \donttest{
 #' set.seed(42)
 #' x <- 1:300
 #' y <- c(seq(0, 8, length.out = 150),
@@ -243,6 +258,7 @@ slope_test <- function(x, y, lower.tail) {
 #'   slope.p.values.threshold.right = 1e-3
 #' )
 #' cat("Detected changepoints:", result$tau_hats, "\n")
+#' }
 #' @export
 ras_detect <- function(x, y, p.values.threshold = 0.01,
                                                   min.length = 10, skip = 1,
@@ -312,11 +328,11 @@ ras_detect <- function(x, y, p.values.threshold = 0.01,
 
           if (this.pvalue1 < slope.p.values.threshold.left &&
               this.pvalue2 < slope.p.values.threshold.right) {
-            cat("ChangePoint Detected at ", this.result$break.points,
-                " with p-value", this.result$p.values,
-                ", Left-slope ", this.result$slope.left,
-                "Right-slope ", this.result$slope.right, " \n")
-            cat(this.pvalue1, " ", this.pvalue2, "\n")
+            message(sprintf(
+              "ChangePoint detected at %s (Davies p = %.3g); left-slope %.3g, right-slope %.3g; slope p-values %.3g / %.3g",
+              this.result$break.points, this.result$p.values,
+              this.result$slope.left, this.result$slope.right,
+              this.pvalue1, this.pvalue2))
 
             tau_hats <- c(tau_hats, this.result$break.points)
             p.values <- c(p.values, this.result$p.values)
@@ -423,6 +439,7 @@ ras_detect <- function(x, y, p.values.threshold = 0.01,
 #' \code{\link{ras}} for the recommended end-to-end entry point.
 #'
 #' @examples
+#' \donttest{
 #' set.seed(42)
 #' x <- 1:300
 #' y <- c(seq(0, 8, length.out = 150),
@@ -443,6 +460,7 @@ ras_detect <- function(x, y, p.values.threshold = 0.01,
 #'   p.value.threshold  = 1e-3
 #' )
 #' cat("Validated changepoints:", final$tau_hats, "\n")
+#' }
 #' @importFrom segmented davies.test
 #' @export
 ras_validate <- function(this.result, x, y, this.start = 1, this.skip = 30,
@@ -497,8 +515,6 @@ ras_validate <- function(this.result, x, y, this.start = 1, this.skip = 30,
       this.test2 <- list(p.value = 1.0)
     }
 
-    cat(this.test1$p.value, this.test2$p.value, "\n")
-
     if (this.test1$p.value < p.value.threshold || this.test2$p.value < p.value.threshold) {
       left.slopes <- c(left.slopes, this.result$slope.left[which(tau_hat == this.result$tau_hats)])
       right.slopes <- c(right.slopes, this.result$slope.right[which(tau_hat == this.result$tau_hats)])
@@ -511,7 +527,9 @@ ras_validate <- function(this.result, x, y, this.start = 1, this.skip = 30,
 
   this.remove <- which(y[tau_hats] <= min_signal)
   if (length(this.remove) >= 1) {
-    tau_hats <- tau_hats[-this.remove]
+    tau_hats     <- tau_hats[-this.remove]
+    left.slopes  <- left.slopes[-this.remove]
+    right.slopes <- right.slopes[-this.remove]
   }
 
   all.changepoints <- this.start + (all.changepoints - 1) * this.skip

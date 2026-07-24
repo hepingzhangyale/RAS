@@ -17,8 +17,10 @@
 #'   Pass \code{-1} for real data.
 #' @param start.point Integer. Starting SNP index for the scan.
 #'   Default \code{1}.
-#' @param save.directory Character. Directory for optional PDF plots.
-#'   Default \code{"simulation"}.
+#' @param save.directory Character. Directory for optional PDF plots (only used
+#'   when \code{isPlot = TRUE}).  Defaults to \code{\link[base]{tempdir}()} so
+#'   nothing is written outside the session's temporary area unless the caller
+#'   chooses an explicit path.
 #' @param this.chrome Integer. Chromosome number for non-simulation plot
 #'   filenames.  Default \code{1}.
 #' @param min_window_size Integer. Minimum scan window half-size.
@@ -29,10 +31,11 @@
 #'   filenames and draw true-signal reference lines.  Default \code{TRUE}.
 #' @param this.repetition Integer. Repetition index used in plot filenames.
 #'   Default \code{1}.
-#' @param screening_round Integer. Number of forward screening rounds.
+#' @param screening_round Integer. Number of forward screening rounds.  Only a
+#'   single round is implemented; values other than \code{1} raise an error.
 #'   Default \code{1}.
-#' @param isPlot Logical. If \code{TRUE}, save a PDF of the scan profile.
-#'   Default \code{TRUE}.
+#' @param isPlot Logical. If \code{TRUE}, save a PDF of the scan profile to
+#'   \code{save.directory}.  Default \code{FALSE} (no file is written).
 #' @param skip1 Integer. Step size for the primary SNP position grid.
 #'   Default \code{100}.
 #' @param skip2 Integer. Step size for growing the window within each grid
@@ -123,10 +126,10 @@
 #' }
 #' @export
 screen_forward_max_region <- function(geno, pgs.mat, this.df, num_signals,
-                              start.point = 1, save.directory = "simulation", this.chrome = 1,
+                              start.point = 1, save.directory = tempdir(), this.chrome = 1,
                               min_window_size = 5, max_window_size = 100,
                               isSimulation = TRUE, this.repetition = 1, screening_round = 1,
-                              isPlot = TRUE, skip1 = 100, skip2 = 5,
+                              isPlot = FALSE, skip1 = 100, skip2 = 5,
                               is_continuous,
                               covariate_formula = NULL,
                               scan_test = c("glm", "score"),
@@ -135,6 +138,14 @@ screen_forward_max_region <- function(geno, pgs.mat, this.df, num_signals,
     covariate_formula <- "sex + age + age_squared + age_sex + pc1 + pc2 + pc3 + pc4 + pc5 + pc6 + pc7 + pc8 + pc9 + pc10"
   }
   scan_test <- match.arg(scan_test)
+
+  # Only a single forward round is implemented and tested. Values > 1 would
+  # silently reuse the accumulated PGS across rounds and overwrite the p-value
+  # grid, so reject them rather than return an incorrect profile.
+  if (!identical(as.integer(screening_round), 1L)) {
+    stop("screening_round > 1 is not supported; only a single forward round is implemented.",
+         call. = FALSE)
+  }
 
   N <- ncol(geno)
   n <- nrow(geno)
@@ -151,11 +162,15 @@ screen_forward_max_region <- function(geno, pgs.mat, this.df, num_signals,
   score_mode <- (!is_continuous && scan_test == "score")
   if (score_mode) {
     cov_form <- stats::as.formula(paste("~", covariate_formula))
-    Zmat <- stats::model.matrix(cov_form, data = this.df)   # incl. intercept
-    yvec <- this.df$phenotype2
-    keep <- stats::complete.cases(Zmat) & !is.na(yvec)
-    Zmat <- Zmat[keep, , drop = FALSE]
-    yvec <- as.numeric(yvec[keep])
+    # Completeness must be resolved on the data frame BEFORE model.matrix():
+    # model.matrix() applies na.action internally and returns only the complete
+    # rows, so testing it afterwards yields a `keep` shorter than this.df. That
+    # breaks the length contract this.pgs[keep] relies on below, where keep must
+    # index the full n rows. Same pattern as compute_gwas_weights().
+    keep <- stats::complete.cases(
+      this.df[, unique(c(all.vars(cov_form), "phenotype2")), drop = FALSE])
+    Zmat <- stats::model.matrix(cov_form, data = this.df[keep, , drop = FALSE])
+    yvec <- as.numeric(this.df$phenotype2[keep])
     fit0 <- stats::glm.fit(Zmat, yvec, family = stats::binomial())
     p0   <- fit0$fitted.values
     w0   <- p0 * (1 - p0)
@@ -174,11 +189,12 @@ screen_forward_max_region <- function(geno, pgs.mat, this.df, num_signals,
   cont_mode <- is_continuous
   if (cont_mode) {
     cov_formC <- stats::as.formula(paste("~", covariate_formula))
-    ZmatC <- stats::model.matrix(cov_formC, data = this.df)  # incl. intercept
-    yvecC <- this.df$phenotype2
-    keepC <- stats::complete.cases(ZmatC) & !is.na(yvecC)
-    ZmatC <- ZmatC[keepC, , drop = FALSE]
-    yvecC <- as.numeric(yvecC[keepC])
+    # See the score branch above: keep must be resolved pre-model.matrix() so it
+    # stays length nrow(this.df) for this.pgs[keepC].
+    keepC <- stats::complete.cases(
+      this.df[, unique(c(all.vars(cov_formC), "phenotype2")), drop = FALSE])
+    ZmatC <- stats::model.matrix(cov_formC, data = this.df[keepC, , drop = FALSE])
+    yvecC <- as.numeric(this.df$phenotype2[keepC])
     qrZC  <- qr(ZmatC)
     ryC   <- qr.resid(qrZC, yvecC)
     SyyC  <- sum(ryC * ryC)
@@ -248,10 +264,10 @@ screen_forward_max_region <- function(geno, pgs.mat, this.df, num_signals,
           V     <- sum(w0 * gperp * gperp)
           if (is.finite(V) && V > 0) {
             Tstat <- (U * U) / V
-            sub.p.values[(kk - 1) * length(this.seq) + count] <-
+            sub.p.values[count] <-
               stats::pchisq(Tstat, df = 1, lower.tail = FALSE)
           } else {
-            sub.p.values[(kk - 1) * length(this.seq) + count] <- 1
+            sub.p.values[count] <- 1
           }
         } else if (cont_mode) {
           # Exact FWL: residualise this window's pgs against the covariates,
@@ -265,10 +281,10 @@ screen_forward_max_region <- function(geno, pgs.mat, this.df, num_signals,
             RSS  <- max(SyyC - beta * Srxy, 0)
             SE   <- sqrt((RSS / dfC) / Srxx)
             tval <- beta / SE
-            sub.p.values[(kk - 1) * length(this.seq) + count] <-
+            sub.p.values[count] <-
               2 * stats::pt(-abs(tval), df = dfC)
           } else {
-            sub.p.values[(kk - 1) * length(this.seq) + count] <- 1
+            sub.p.values[count] <- 1
           }
         } else {
           this.df$this.pgs <- this.pgs
@@ -277,10 +293,11 @@ screen_forward_max_region <- function(geno, pgs.mat, this.df, num_signals,
           fit <- glm(full_formula, family = binomial(), data = this.df)
 
           if (nrow(summary(fit)$coefficients) > 1) {
-            sub.p.values[(kk - 1) * length(this.seq) + count] <- summary(fit)$coefficients[2, 4]
+            sub.p.values[count] <- summary(fit)$coefficients[2, 4]
           } else {
-            print("warning")
-            sub.p.values[(kk - 1) * length(this.seq) + count] <- 1
+            warning("PGS term dropped from logistic fit at position ",
+                    this.start, "; p-value set to 1", call. = FALSE)
+            sub.p.values[count] <- 1
           }
         }
       }

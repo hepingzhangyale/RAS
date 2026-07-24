@@ -66,16 +66,14 @@
 #'   n_snps    = 500000
 #' )
 #'
-#' ## Abort if memory is insufficient
-#' \dontrun{
-#' ras_memory(
+#' ## Abort if memory is insufficient (wrapped in try() so the example runs)
+#' try(ras_memory(
 #'   n_total   = 100000,
 #'   n_train   = 50000,
 #'   n_holdout = 50000,
 #'   n_snps    = 1000000,
 #'   abort     = TRUE
-#' )
-#' }
+#' ))
 #' @export
 ras_memory <- function(n_total, n_train, n_holdout, n_snps,
                                 bytes_per_element = 8,
@@ -130,7 +128,7 @@ ras_memory <- function(n_total, n_train, n_holdout, n_snps,
 
   # ── Print report ──────────────────────────────────────────────────────────
   cat("============================================================\n")
-  cat("        RAS Pipeline — System & Memory Check\n")
+  cat("        RAS Pipeline - System & Memory Check\n")
   cat("============================================================\n")
   cat("  R version  :", r_ver, "\n")
   cat("  Platform   :", platform, "\n")

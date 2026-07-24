@@ -20,10 +20,10 @@ plot_ras_scan(
 }
 \arguments{
 \item{x}{Numeric vector. SNP position index grid from the scan
-(\code{scan$x} returned by \code{\link{run_ras_scan}}).}
+(\code{scan$x} returned by \code{\link{ras_scan}}).}
 
 \item{y}{Numeric vector. Averaged \eqn{-\log_{10}(p)}-value profile
-(\code{scan$y} returned by \code{\link{run_ras_scan}}).}
+(\code{scan$y} returned by \code{\link{ras_scan}}).}
 
 \item{detection.result}{List. Output from \code{\link{ras_validate}},
 containing \code{tau_hats}, \code{all.changepoints}, \code{all.p.values},
@@ -95,35 +95,10 @@ Output files are named:
 \code{chr-<chrom>-cp-plot.<ext>} and
 \code{chr-<chrom>-cp-p-values-plot.<ext>}.
 }
-\examples{
-set.seed(7)
-x <- seq(1, 500, by = 10)
-y <- c(seq(0, 9, length.out = 25), seq(9, 1, length.out = 25)) +
-     rnorm(50, sd = 0.4)
-
-## Construct a minimal detection result by hand
-detection <- list(
-  tau_hats         = x[25],
-  all.changepoints = x[c(20, 25, 30)],
-  all.p.values     = c(5, 12, 4),
-  left.slopes      = 0.32,
-  right.slopes     = -0.28
-)
-
-plot_ras_scan(
-  x                = x,
-  y                = y,
-  detection.result = detection,
-  this_chrom       = 1,
-  save.directory   = tempdir(),
-  p.threshold      = 8,
-  device           = "screen"
-)
-}
 \seealso{
 \code{\link{plot_ras_zoom_regions}} for zoomed panels around each
 changepoint.
-\code{\link{run_ras_pipeline}} which calls this function automatically.
+\code{\link{ras}} which calls this function automatically.
 \code{\link{ras_validate}} whose output is passed as
 \code{detection.result}.
 }

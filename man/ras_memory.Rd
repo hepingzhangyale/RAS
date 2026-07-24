@@ -81,16 +81,14 @@ ras_memory(
   n_snps    = 500000
 )
 
-## Abort if memory is insufficient
-\dontrun{
-ras_memory(
+## Abort if memory is insufficient (wrapped in try() so the example runs)
+try(ras_memory(
   n_total   = 100000,
   n_train   = 50000,
   n_holdout = 50000,
   n_snps    = 1000000,
   abort     = TRUE
-)
-}
+))
 }
 \seealso{
 \code{\link{ras_scan}}, \code{\link{ras}} for the

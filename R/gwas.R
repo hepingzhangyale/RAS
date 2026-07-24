@@ -40,7 +40,7 @@
 #' fits \code{lm(phenotype1 ~ this.x)} for each SNP, excluding samples with
 #' missing dosage via \code{na.omit}.  The covariates are assumed to have
 #' already been residualised from \code{phenotype1} before this function is
-#' called (as done in \code{\link{run_ras_scan}}).
+#' called (as done in \code{\link{ras_scan}}).
 #'
 #' For \strong{binary traits} (\code{is_continuous = FALSE}) the function
 #' builds a data frame combining the training-split rows of \code{this.df}
@@ -102,7 +102,7 @@ compute_gwas_weights <- function(geno, phenotype1, this.sample, this.df,
 
   N <- ncol(geno)
   coef.mat <- matrix(NA_real_, nrow = N, ncol = 4)
-  cat("Starting GWAS ... \n")
+  message("Starting GWAS ...")
 
   # Training-split genotype submatrix (m x N), shared by both branches.
   Xg <- geno[this.sample, , drop = FALSE]
@@ -256,12 +256,12 @@ compute_gwas_weights <- function(geno, phenotype1, this.sample, this.df,
 #' the primary goal is to aggregate regional signals rather than obtain
 #' individual-level accuracy.
 #'
-#' The function modifies \code{geno} in the calling frame due to R's
-#' copy-on-modify semantics: a copy of \code{geno} is made when the
-#' \code{NA}-replacement assignment is executed.  Callers working with very
-#' large genotype matrices should be aware that this temporarily doubles the
-#' memory footprint of \code{geno}; use \code{\link{ras_memory}} to
-#' check feasibility before running.
+#' The caller's \code{geno} object is \strong{not} modified: the
+#' \code{NA}-replacement assignment triggers R's copy-on-modify semantics, so a
+#' local copy of \code{geno} is made inside the function.  Callers working with
+#' very large genotype matrices should be aware that this temporarily doubles
+#' the memory footprint of \code{geno} during the call; use
+#' \code{\link{ras_memory}} to check feasibility before running.
 #'
 #' @return
 #' A numeric matrix of dimensions
@@ -291,9 +291,8 @@ compute_gwas_weights <- function(geno, phenotype1, this.sample, this.df,
 #' @export
 compute_pgs_matrix <- function(geno, this.leftout, pgs.weights) {
   geno[is.na(geno)] <- 0L
-  pgs.mat <- matrix(data = NA, nrow = length(this.leftout), ncol = ncol(geno))
-  for (i in 1:length(this.leftout)) {
-    pgs.mat[i, ] <- geno[this.leftout[i], ] * pgs.weights
-  }
+  # Each hold-out row is its dosage vector scaled column-wise by pgs.weights;
+  # sweep does this in one vectorized pass (identical to the per-row product).
+  pgs.mat <- sweep(geno[this.leftout, , drop = FALSE], 2L, pgs.weights, "*")
   return(pgs.mat)
 }

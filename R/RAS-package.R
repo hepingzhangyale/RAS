@@ -109,8 +109,8 @@
 #'   \item \code{\link{slope_test}}
 #' }
 #'
-#' @importFrom grDevices dev.off pdf png
-#' @importFrom graphics abline arrows axis legend lines mtext par plot rect segments text
+#' @importFrom grDevices dev.off pdf png rgb
+#' @importFrom graphics abline arrows axis legend lines mtext par plot plot.new rect segments text
 #' @importFrom stats as.formula binomial coef df.residual glm lm na.omit pt
 #' @useDynLib RAS, .registration = TRUE
 "_PACKAGE"
